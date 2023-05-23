@@ -1,3 +1,5 @@
+let source = null; // Store the source outside the click handler
+
 function validateInput(inputElement) {
     var warningText = document.getElementById('inputHelp');
     if (inputElement.value.includes(' ')) {
@@ -7,53 +9,61 @@ function validateInput(inputElement) {
         warningText.classList.add('d-none');
     }
 }
+
+
+
+
 let isShown = false;
-function resizeTextarea(textarea) {
-    textarea.style.height = 'auto';
-    textarea.style.height = (textarea.scrollHeight) + 'px';
-}
+
 
 
 
 $(document).ready(function () {
-    $('#getTagsForm').on('submit', function (e) {
-        if (isShown) {
-            $('#hashtag-output_div').toggleClass('d-none');
-            isShown = false;
+    $('#submitButton').on('click', function (e) {
+        $("#hashtag-output").css('height', $("#hashtag-output").prop('scrollHeight') + 'px');
+
+        console.log('clicked');
+        if (source) {
+            source.close(); // Close the previous connection
         }
+
+
+
         e.preventDefault();
-        $('#loading-spinner').toggleClass('d-none');
+        if (!isShown) {
+            $('#hashtag-output_div').toggleClass('d-none');
+            isShown = true;
+
+        }
+        $("#hashtag-output").val("");
 
         var inputText = $('#tagInput').val();
-        $.ajax({
-            url: '/gettags/' + inputText,
-            type: 'GET',
-            success: function (data) {
-                console.log('Success:', data);
-                $('#hashtag-output_div').toggleClass('d-none');
-                isShown = true;
+        $('#tagInput').val("");
 
+        source = new EventSource("/gettags/" + inputText);
 
-                $('#hashtag-output').val(data);
+        source.onmessage = function (event) {
+            console.log(event.data);
 
+            if (event.data == '[DONE]') {
+                source.onmessage = null; // Remove the event handler
+                source.close();
+                console.log('done');
+            } else {
+                var textarea = $("#hashtag-output");
+                textarea.val(textarea.val() + event.data);
+                textarea.css('height', textarea.prop('scrollHeight') + 'px');
 
-                var textarea = $('#hashtag-output')[0];
-                resizeTextarea(textarea);
-
-
-                $('#loading-spinner').toggleClass('d-none');
-            },
-            error: function (error) {
-                console.log('Error:', error);
             }
-        });
+        };
+
+
+
     });
 });
 
-$(document).ready(function () {
-    $('#hashtag-output').on('input', function () {
-        this.style.height = 'auto';
-        this.style.height = (this.scrollHeight) + 'px';
-    });
-});
+
+
+
+
 
